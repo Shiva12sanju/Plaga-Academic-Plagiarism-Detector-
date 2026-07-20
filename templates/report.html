@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Plagiarism Report | {{ result.document1.filename }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary btn-sm mb-3">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <h1 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 0.25rem;">Audit Report</h1>
+        <p class="text-secondary mb-0">Detailed analysis for <b>{{ result.document1.filename }}</b></p>
+    </div>
+    {% if result.report_path %}
+        <a href="{{ url_for('download_report', result_id=result.id) }}" class="btn btn-primary">
+            <i class="fa-solid fa-download"></i> Download PDF Report
+        </a>
+    {% endif %}
+</div>
+
+<div class="report-grid">
+    <!-- Left Column: Metrics and metadata -->
+    <div>
+        <div class="glass-card report-summary-card mb-4">
+            <h4 style="font-family: 'Outfit'; font-weight: 700;">Similarity Index</h4>
+            
+            {% set score = result.plagiarism_percentage %}
+            <div class="circular-score" style="
+                {% if score < 20 %}
+                    background: radial-gradient(circle, var(--bg-dark) 60%, transparent 100%), linear-gradient(135deg, #10b981 0%, #34d399 100%);
+                {% elif score < 50 %}
+                    background: radial-gradient(circle, var(--bg-dark) 60%, transparent 100%), linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+                {% else %}
+                    background: radial-gradient(circle, var(--bg-dark) 60%, transparent 100%), linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+                {% endif %}
+            ">
+                <span class="circular-score-val" style="
+                    {% if score < 20 %}
+                        color: #34d399;
+                    {% elif score < 50 %}
+                        color: #fbbf24;
+                    {% else %}
+                        color: #f87171;
+                    {% endif %}
+                ">{{ score }}%</span>
+            </div>
+
+            <div class="text-center w-100">
+                {% if score < 20 %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 w-100 mb-3" style="border-radius: 12px;">Low Similarity (Clean)</span>
+                {% elif score < 50 %}
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 fs-6 w-100 mb-3" style="border-radius: 12px;">Moderate Similarity</span>
+                {% else %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6 w-100 mb-3" style="border-radius: 12px;">High Plagiarism Risk</span>
+                {% endif %}
+            </div>
+
+            <div class="comparison-box text-start">
+                <div class="comparison-title">Audited Document</div>
+                <div class="comparison-name mb-3" style="word-break: break-all;">{{ result.document1.filename }}</div>
+                
+                <div class="comparison-title">Compared Against</div>
+                <div class="comparison-name mb-3" style="word-break: break-all;">
+                    {% if result.document2 %}
+                        {{ result.document2.filename }}
+                    {% else %}
+                        System Database
+                    {% endif %}
+                </div>
+
+                <div class="comparison-title">Audit Timestamp</div>
+                <div class="comparison-name" style="font-size: 0.9rem; color: var(--text-secondary);">{{ result.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            </div>
+        </div>
+
+        {% if matching_paragraphs %}
+            <div class="glass-card mb-4" style="padding: 1.5rem;">
+                <h5 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 1.25rem;"><i class="fa-solid fa-layer-group text-primary me-2"></i> Match Breakdown</h5>
+                <ul class="list-unstyled mb-0">
+                    {% for match in matching_paragraphs %}
+                        <li class="mb-3 p-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; font-size: 0.85rem;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-primary">Match #{{ loop.index }}</span>
+                                <span class="badge bg-danger-subtle text-danger">{{ match.score }}% Similarity</span>
+                            </div>
+                            <div class="text-secondary text-truncate">Source: "{{ match.source_paragraph }}"</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column: Document text viewer with highlights -->
+    <div>
+        <div class="glass-card" style="height: 100%;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 0;"><i class="fa-solid fa-file-invoice text-primary me-2"></i> Document Content Viewer</h4>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    <span class="d-inline-block me-2" style="width: 12px; height: 12px; background: rgba(239, 68, 68, 0.2); border-bottom: 2px solid var(--danger-color); border-radius: 2px;"></span>
+                    Plagiarized Phrases
+                </div>
+            </div>
+            
+            <div class="text-viewer" id="document-text-container">{{ highlighted_text|safe }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

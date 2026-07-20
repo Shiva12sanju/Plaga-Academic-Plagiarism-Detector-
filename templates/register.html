@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account | AI Academic Plagiarism Detector{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+<div class="row justify-content-center">
+
+<div class="col-lg-10">
+
+<div class="glass-card p-0 overflow-hidden">
+
+<div class="row g-0">
+
+<!-- LEFT SIDE -->
+
+<div class="col-md-5 d-flex align-items-center"
+style="background:linear-gradient(135deg,#09153a,#363658);padding:50px;color:rgb(201, 171, 171);">
+
+<div>
+
+<h1 style="font-family:'Outfit';font-weight:800;">
+
+Join PlagAI
+
+</h1>
+
+<p class="mt-4" style="font-size:17px;line-height:1.8;font-family: Arial, Helvetica, sans-serif;">
+
+Create your account and experience AI-powered
+plagiarism detection using BERT,
+Sentence Transformers and Semantic Similarity.
+
+</p>
+
+<div class="mt-5">
+
+<i class="fas fa-user-graduate fa-5x"></i>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- RIGHT SIDE -->
+
+<div class="col-md-7">
+
+<div style="padding:45px;">
+
+<h2 class="mb-2"
+style="font-family:'Outfit';font-weight:700;">
+
+Create Account
+
+</h2>
+
+<p class="text-muted mb-4">
+
+Fill in your details below.
+
+</p>
+
+<form action="{{ url_for('register') }}" method="POST">
+
+<!-- Name -->
+
+<div class="mb-3">
+
+<label class="form-label">
+
+Full Name
+
+</label>
+
+<div class="input-group">
+
+<span class="input-group-text">
+
+<i class="fas fa-user"></i>
+
+</span>
+
+<input
+type="text"
+name="name"
+class="form-control"
+placeholder="John Doe"
+required>
+
+</div>
+
+</div>
+
+<!-- Email -->
+
+<div class="mb-3">
+
+<label class="form-label">
+
+Academic Email
+
+</label>
+
+<div class="input-group">
+
+<span class="input-group-text">
+
+<i class="fas fa-envelope"></i>
+
+</span>
+
+<input
+type="email"
+name="email"
+class="form-control"
+placeholder="john@university.edu"
+required>
+
+</div>
+
+</div>
+
+<!-- Role -->
+
+<div class="mb-3">
+
+<label class="form-label">
+
+Select Role
+
+</label>
+
+<div class="input-group">
+
+<span class="input-group-text">
+
+<i class="fas fa-users"></i>
+
+</span>
+
+<select
+name="role"
+id="role"
+class="form-select"
+required>
+
+<option value="">Choose Role</option>
+
+<option value="Student">
+🎓 Student
+</option>
+
+<option value="Faculty">
+👨‍🏫 Faculty
+</option>
+
+<option value="Admin">
+👨‍💼 Admin
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<!-- Admin Key -->
+
+<div class="mb-3"
+id="adminKeyDiv"
+style="display:none;">
+
+<label class="form-label">
+
+Admin Secret Key
+
+</label>
+
+<div class="input-group">
+
+<span class="input-group-text">
+
+<i class="fas fa-key"></i>
+
+</span>
+
+<input
+type="password"
+name="admin_key"
+class="form-control"
+placeholder="Enter Admin Secret Key">
+
+</div>
+
+</div>
+
+<!-- Password -->
+
+<div class="mb-3">
+
+<label class="form-label">
+
+Password
+
+</label>
+
+<div class="input-group">
+
+<span class="input-group-text">
+
+<i class="fas fa-lock"></i>
+
+</span>
+
+<input
+type="password"
+id="password"
+name="password"
+class="form-control"
+placeholder="Minimum 6 characters"
+required>
+
+<button
+type="button"
+class="btn btn-outline-secondary"
+onclick="togglePassword()">
+
+<i class="fas fa-eye"
+id="eyeIcon"></i>
+
+</button>
+
+</div>
+
+<small id="strength"
+class="text-muted">
+
+Password Strength
+
+</small>
+
+</div>
+
+<button
+type="submit"
+class="btn btn-primary w-100 py-3">
+
+<i class="fas fa-user-plus me-2"></i>
+
+Create Account
+
+</button>
+
+</form>
+
+<hr class="my-4">
+
+<div class="text-center">
+
+Already have an account?
+
+<a href="{{ url_for('login') }}"
+class="fw-bold text-decoration-none">
+
+Sign In
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const role=document.getElementById("role");
+
+const admin=document.getElementById("adminKeyDiv");
+
+role.addEventListener("change",function(){
+
+admin.style.display=
+this.value==="Admin"
+?
+"block"
+:
+"none";
+
+});
+
+function togglePassword(){
+
+const p=document.getElementById("password");
+
+const eye=document.getElementById("eyeIcon");
+
+if(p.type==="password"){
+
+p.type="text";
+
+eye.classList.replace("fa-eye","fa-eye-slash");
+
+}else{
+
+p.type="password";
+
+eye.classList.replace("fa-eye-slash","fa-eye");
+
+}
+
+}
+
+const password=document.getElementById("password");
+
+const strength=document.getElementById("strength");
+
+password.addEventListener("keyup",function(){
+
+let val=password.value;
+
+if(val.length<6){
+
+strength.innerHTML="🔴 Weak Password";
+
+strength.style.color="red";
+
+}
+
+else if(val.length<10){
+
+strength.innerHTML="🟡 Medium Password";
+
+strength.style.color="orange";
+
+}
+
+else{
+
+strength.innerHTML="🟢 Strong Password";
+
+strength.style.color="green";
+
+}
+
+});
+
+</script>
+
+{% endblock %}

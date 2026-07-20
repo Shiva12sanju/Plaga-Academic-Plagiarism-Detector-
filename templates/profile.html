@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-primary text-white">
+
+            <h3>
+                <i class="fas fa-user-circle"></i>
+                My Profile
+            </h3>
+
+        </div>
+
+        <div class="card-body">
+
+            <div class="text-center mb-4">
+
+                <div
+                    class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center"
+                    style="width:100px;height:100px;font-size:40px;">
+
+                    {{ current_user.fullname[0]|upper }}
+
+                </div>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <tr>
+
+                    <th width="30%">Full Name</th>
+
+                    <td>{{ current_user.fullname }}</td>
+
+                </tr>
+
+                <tr>
+
+                    <th>Email</th>
+
+                    <td>{{ current_user.email }}</td>
+
+                </tr>
+
+                <tr>
+
+                    <th>Role</th>
+
+                    <td>{{ current_user.role }}</td>
+
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

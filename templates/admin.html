@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel | AI Plagiarism Detector{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div>
+        <h1 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 0.25rem;">Administrator Dashboard</h1>
+        <p class="text-secondary mb-0">Overview of all system users, uploaded files, and similarity checks.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem;">
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(99, 102, 241, 0.1); color: var(--primary-solid);"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700;">{{ users|length }}</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Registered Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem;">
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(236, 72, 153, 0.1); color: #ec4899;"><i class="fa-solid fa-file-pdf"></i></div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700;">{{ documents|length }}</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Audited Documents</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem;">
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(16, 185, 129, 0.1); color: var(--success-color);"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700;">{{ results|length }}</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Completed Audits</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card mb-5">
+    <h3 class="mb-4" style="font-family: 'Outfit'; font-weight: 700;"><i class="fa-solid fa-users text-primary me-2"></i> Users Registry</h3>
+    <div class="table-responsive">
+        <table class="custom-table" id="admin-users-table">
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Email Address</th>
+                    <th>Audits Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                    <tr>
+                        <td class="text-secondary">#{{ u.id }}</td>
+                        <td class="fw-semibold">{{ u.name }}</td>
+                        <td class="text-secondary">{{ u.email }}</td>
+                        <td>{{ u.documents|length }} uploads</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="glass-card mb-5">
+    <h3 class="mb-4" style="font-family: 'Outfit'; font-weight: 700;"><i class="fa-solid fa-file-invoice text-primary me-2"></i> System Manuscripts</h3>
+    <div class="table-responsive">
+        <table class="custom-table" id="admin-docs-table">
+            <thead>
+                <tr>
+                    <th>Doc ID</th>
+                    <th>Author</th>
+                    <th>Filename</th>
+                    <th>Upload Date</th>
+                    <th>Character Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                    <tr>
+                        <td class="text-secondary">#{{ doc.id }}</td>
+                        <td class="fw-semibold">{{ doc.owner.name }}</td>
+                        <td>{{ doc.filename }}</td>
+                        <td class="text-secondary">{{ doc.upload_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ doc.extracted_text|length if doc.extracted_text else 0 }} chars</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

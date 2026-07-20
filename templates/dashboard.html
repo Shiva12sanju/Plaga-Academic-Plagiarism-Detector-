@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | AI Plagiarism Detector{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h1 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 0.25rem;">Welcome, {{ current_user.name }}</h1>
+        <p class="text-secondary mb-0">Here is a summary of your recent semantic document audits.</p>
+    </div>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary" id="dashboard-new-audit">
+        <i class="fa-solid fa-plus"></i> New Audit
+    </a>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(99, 102, 241, 0.1); color: var(--primary-solid);">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700; font-size: 1.5rem;">{{ documents|length }}</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Total Audits</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
+            {% set total_score = 0.0 %}
+            {% if results|length > 0 %}
+                {% for r in results %}
+                    {% set total_score = total_score + r.plagiarism_percentage %}
+                {% endfor %}
+                {% set avg_score = (total_score / results|length)|round(1) %}
+            {% else %}
+                {% set avg_score = 0.0 %}
+            {% endif %}
+            
+            {% set icon_color = 'var(--success-color)' %}
+            {% if avg_score > 50 %}
+                {% set icon_color = 'var(--danger-color)' %}
+            {% elif avg_score > 20 %}
+                {% set icon_color = 'var(--warning-color)' %}
+            {% endif %}
+            
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(245, 158, 11, 0.1); color: {{ icon_color }};">
+                <i class="fa-solid fa-gauge-high"></i>
+            </div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700; font-size: 1.5rem;">{{ avg_score }}%</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Average Similarity</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="glass-card" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
+            <div class="feature-icon" style="margin-bottom: 0; background: rgba(16, 185, 129, 0.1); color: var(--success-color);">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+                <h3 class="mb-0" style="font-family: 'Outfit'; font-weight: 700; font-size: 1.5rem;">100%</h3>
+                <p class="text-secondary mb-0" style="font-size: 0.85rem;">Integrity Maintained</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audits Table -->
+<div class="glass-card">
+    <h3 style="font-family: 'Outfit'; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i> Audit History</h3>
+    
+    {% if results %}
+        <div class="table-responsive">
+            <table class="custom-table" id="audit-history-table">
+                <thead>
+                    <tr>
+                        <th>Document Filename</th>
+                        <th>Checked Against</th>
+                        <th>Audit Date</th>
+                        <th>Plagiarism Score</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in results %}
+                        <tr>
+                            <td class="fw-semibold">
+                                <i class="fa-regular fa-file-pdf text-danger me-2"></i> {{ result.document1.filename }}
+                            </td>
+                            <td>
+                                {% if result.document2 %}
+                                    <i class="fa-regular fa-file-lines text-secondary me-2"></i> {{ result.document2.filename }}
+                                {% else %}
+                                    <i class="fa-solid fa-server text-secondary me-2"></i> System Index
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary">
+                                {{ result.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </td>
+                            <td>
+                                {% if result.plagiarism_percentage < 20 %}
+                                    <span class="score-badge score-low">{{ result.plagiarism_percentage }}% Unique</span>
+                                {% elif result.plagiarism_percentage < 50 %}
+                                    <span class="score-badge score-medium">{{ result.plagiarism_percentage }}% Moderate</span>
+                                {% else %}
+                                    <span class="score-badge score-high">{{ result.plagiarism_percentage }}% Plagiarized</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <a href="{{ url_for('report', result_id=result.id) }}" class="btn btn-secondary btn-sm py-1 px-2" style="font-size: 0.85rem;" title="View Online Report">
+                                        <i class="fa-solid fa-eye"></i> View
+                                    </a>
+                                    {% if result.report_path %}
+                                        <a href="{{ url_for('download_report', result_id=result.id) }}" class="btn btn-primary btn-sm py-1 px-2" style="font-size: 0.85rem;" title="Download PDF Report">
+                                            <i class="fa-solid fa-download"></i> PDF
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-folder-open text-secondary fs-1 mb-3"></i>
+            <h4>No audits performed yet</h4>
+            <p class="text-secondary mb-4">Upload your first academic manuscript to start detecting semantic similarities.</p>
+            <a href="{{ url_for('upload') }}" class="btn btn-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Document</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

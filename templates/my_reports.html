@@ -1,0 +1,62 @@
+<table class="table table-bordered">
+
+<thead>
+
+<tr>
+
+<th>File</th>
+
+<th>Similarity</th>
+
+<th>Plagiarism</th>
+
+<th>Matched File</th>
+
+<th>Date</th>
+
+<th>Report</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for result in results %}
+
+<tr>
+
+<td>{{ result.document1.filename }}</td>
+
+<td>{{ "%.2f"|format(result.similarity_score * 100) }}%</td>
+
+<td>{{ result.plagiarism_percentage }}%</td>
+
+<td>
+{% if result.document2 %}
+{{ result.document2.filename }}
+{% else %}
+No Match
+{% endif %}
+</td>
+
+<td>{{ result.created_at.strftime("%d-%m-%Y") }}</td>
+
+<td>
+
+<a href="{{ url_for('report', result_id=result.id) }}"
+class="btn btn-primary btn-sm">
+
+View
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>

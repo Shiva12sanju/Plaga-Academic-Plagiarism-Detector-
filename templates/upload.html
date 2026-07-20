@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}New Plagiarism Audit | AI Plagiarism Detector{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="glass-card text-center">
+            <h2 class="mb-3" style="font-family: 'Outfit'; font-weight: 700;">Audit Academic Document</h2>
+            <p class="mb-5 text-secondary">Upload your PDF, DOCX, or TXT document to generate semantic vector representations and check for conceptual overlapping.</p>
+            
+            <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data" id="upload-form">
+                <div class="upload-zone" id="drop-zone">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div class="upload-text" id="upload-status-text">Drag & Drop file here or click to browse</div>
+                    <div class="upload-subtext">Supported formats: PDF, DOCX, TXT (Max size: 16 MB)</div>
+                    <input type="file" name="file" id="file-input" class="file-input" accept=".pdf,.docx,.txt" required>
+                </div>
+                
+                <div id="file-details-container" class="mt-4 d-none">
+                    <div class="d-flex align-items-center justify-content-center gap-3 p-3" style="background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border-color);">
+                        <i class="fa-solid fa-file-lines text-primary fs-3"></i>
+                        <div class="text-start">
+                            <div class="fw-bold" id="selected-file-name">filename.pdf</div>
+                            <div class="text-secondary" id="selected-file-size" style="font-size: 0.85rem;">0.0 KB</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm ms-3" id="clear-file-btn" style="padding: 0.25rem 0.5rem;"><i class="fa-solid fa-trash-can text-danger"></i></button>
+                    </div>
+                </div>
+
+                <div class="mt-5 d-flex gap-3 justify-content-center">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" id="start-audit-btn" disabled>
+                        <i class="fa-solid fa-circle-notch fa-spin d-none me-2" id="spinner-icon"></i>Start Semantic Audit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="container">
+
+<h2>Upload Assignment</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+<input type="file" name="file" required>
+
+<br>
+
+<button type="submit">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const statusText = document.getElementById('upload-status-text');
+    const fileDetails = document.getElementById('file-details-container');
+    const fileNameDisp = document.getElementById('selected-file-name');
+    const fileSizeDisp = document.getElementById('selected-file-size');
+    const clearBtn = document.getElementById('clear-file-btn');
+    const submitBtn = document.getElementById('start-audit-btn');
+    const spinner = document.getElementById('spinner-icon');
+    const form = document.getElementById('upload-form');
+
+    // Drag events
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-primary');
+            dropZone.style.borderColor = 'var(--primary-solid)';
+            dropZone.style.background = 'rgba(99, 102, 241, 0.05)';
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '';
+            dropZone.style.background = '';
+        }, false);
+    });
+
+    // File selected
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(fileInput.files);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        handleFiles(files);
+    });
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            const sizeInKb = (file.size / 1024).toFixed(1);
+            
+            fileNameDisp.textContent = file.name;
+            fileSizeDisp.textContent = `${sizeInKb} KB`;
+            
+            fileDetails.classList.remove('d-none');
+            submitBtn.disabled = false;
+            
+            statusText.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-check"></i> File ready for check</span>`;
+        }
+    }
+
+    clearBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        fileDetails.classList.add('d-none');
+        submitBtn.disabled = true;
+        statusText.textContent = 'Drag & Drop file here or click to browse';
+    });
+
+    form.addEventListener('submit', () => {
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        statusText.innerHTML = `<span class="text-info"><i class="fa-solid fa-gear fa-spin"></i> Processing Document Embeddings...</span>`;
+    });
+</script>
+{% endblock %}
