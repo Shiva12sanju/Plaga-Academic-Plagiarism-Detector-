@@ -3,49 +3,79 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <title>Admin Dashboard</title>
+<title>Admin Dashboard</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <style>
 
-        body{
-            background:#f4f6f9;
-        }
+<style>
 
-        .navbar{
-            background:#212529;
-        }
+body{
+    background:#f4f6f9;
+}
 
-        .navbar-brand{
-            color:white;
-            font-size:24px;
-            font-weight:bold;
-        }
 
-        .card{
-            border:none;
-            border-radius:15px;
-            box-shadow:0 5px 15px rgba(0,0,0,.15);
-        }
+.navbar{
+    background:#212529;
+}
 
-        h2{
-            font-weight:bold;
-        }
 
-        table{
-            background:white;
-        }
+.navbar-brand{
+    color:white;
+    font-size:24px;
+    font-weight:bold;
+}
 
-    </style>
+
+.card{
+
+    border:none;
+    border-radius:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,.15);
+
+}
+
+
+h2{
+    font-weight:bold;
+}
+
+
+table{
+
+    background:white;
+
+}
+
+
+.table th{
+
+    text-align:center;
+
+}
+
+
+.table td{
+
+    text-align:center;
+
+}
+
+
+</style>
+
 
 </head>
 
+
+
 <body>
 
+
 <nav class="navbar px-4">
+
 
 <span class="navbar-brand">
 
@@ -53,7 +83,9 @@
 
 </span>
 
+
 <div>
+
 
 <a href="{{ url_for('analytics') }}"
 class="btn btn-success">
@@ -62,6 +94,7 @@ Analytics
 
 </a>
 
+
 <a href="{{ url_for('logout') }}"
 class="btn btn-danger">
 
@@ -69,14 +102,23 @@ Logout
 
 </a>
 
+
 </div>
+
 
 </nav>
 
 
+
+
+
 <div class="container mt-4">
 
+
+
 <div class="row g-4">
+
+
 
 <div class="col-md-2">
 
@@ -90,6 +132,9 @@ Logout
 
 </div>
 
+
+
+
 <div class="col-md-2">
 
 <div class="card p-3 text-center bg-success text-white">
@@ -101,6 +146,10 @@ Logout
 </div>
 
 </div>
+
+
+
+
 
 <div class="col-md-2">
 
@@ -114,6 +163,10 @@ Logout
 
 </div>
 
+
+
+
+
 <div class="col-md-3">
 
 <div class="card p-3 text-center bg-info text-white">
@@ -126,22 +179,37 @@ Logout
 
 </div>
 
+
+
+
+
 <div class="col-md-3">
 
 <div class="card p-3 text-center bg-danger text-white">
 
 <h5>Reports</h5>
 
-<h2>{{ total_results }}</h2>
+<h2>{{ total_reports }}</h2>
 
 </div>
 
 </div>
 
+
+
+
 </div>
+
+
+
+
 
 
 <hr class="my-5">
+
+
+
+
 
 
 <h3 class="mb-3">
@@ -150,9 +218,77 @@ Registered Users
 
 </h3>
 
+<hr class="my-5">
+
+
+<h3>
+Recent Activity
+</h3>
+
+
 <table class="table table-bordered table-hover">
 
 <thead class="table-dark">
+
+<tr>
+
+<th>User</th>
+
+<th>Activity</th>
+
+<th>Date</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for activity in activities %}
+
+<tr>
+
+<td>
+
+{{ activity.user.fullname if activity.user else "System" }}
+
+</td>
+
+
+<td>
+
+{{ activity.action }}
+
+</td>
+
+
+<td>
+
+{{ activity.created_at.strftime('%d-%m-%Y %H:%M') }}
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+
+<table class="table table-bordered table-hover">
+
+
+<thead class="table-dark">
+
 
 <tr>
 
@@ -164,27 +300,64 @@ Registered Users
 
 <th>Role</th>
 
+<th>Joined Date</th>
+
+<th>Uploads</th>
+
 <th>Action</th>
 
 </tr>
 
+
 </thead>
+
+
+
+
 
 <tbody>
 
+
 {% for user in users %}
+
+
 
 <tr>
 
-<td>{{ user.id }}</td>
-
-<td>{{ user.fullname }}</td>
-
-<td>{{ user.email }}</td>
 
 <td>
 
+{{ user.id }}
+
+</td>
+
+
+
+
+<td>
+
+{{ user.fullname }}
+
+</td>
+
+
+
+
+<td>
+
+{{ user.email }}
+
+</td>
+
+
+
+
+
+<td>
+
+
 {% if user.role=="Admin" %}
+
 
 <span class="badge bg-dark">
 
@@ -192,7 +365,11 @@ Admin
 
 </span>
 
+
+
 {% elif user.role=="Faculty" %}
+
+
 
 <span class="badge bg-success">
 
@@ -200,7 +377,12 @@ Faculty
 
 </span>
 
+
+
+
 {% else %}
+
+
 
 <span class="badge bg-primary">
 
@@ -208,32 +390,109 @@ Student
 
 </span>
 
+
+
 {% endif %}
+
+
 
 </td>
 
+
+
+
+
+
 <td>
+
+
+{{ user.created_at.strftime('%d-%m-%Y') if user.created_at else 'N/A' }}
+
+
+</td>
+
+
+
+
+
+<td>
+
+
+{{ user.upload_count if user.upload_count else 0 }}
+
+
+</td>
+
+
+
+
+
+
+<td>
+
+
+
+{% if user.id != current_user.id %}
+
 
 <a href="{{ url_for('delete_user', user_id=user.id) }}"
 class="btn btn-danger btn-sm"
 onclick="return confirm('Delete this user?')">
 
+
 Delete
+
 
 </a>
 
+
+
+{% else %}
+
+
+<span class="badge bg-secondary">
+
+Current User
+
+</span>
+
+
+
+{% endif %}
+
+
+
 </td>
+
+
 
 </tr>
 
+
+
+
 {% endfor %}
 
+
+
+
 </tbody>
+
+
 
 </table>
 
 
-<hr>
+
+
+
+
+
+
+<hr class="my-5">
+
+
+
 
 
 <h3 class="mb-3">
@@ -242,36 +501,68 @@ Quick Actions
 
 </h3>
 
+
+
+
 <a href="{{ url_for('upload') }}"
 class="btn btn-primary">
 
+
 Upload Document
 
+
 </a>
+
+
+
+
 
 <a href="{{ url_for('faculty_dashboard') }}"
 class="btn btn-success">
 
+
 Faculty Dashboard
 
+
 </a>
+
+
+
+
 
 <a href="{{ url_for('student_dashboard') }}"
 class="btn btn-warning">
 
+
 Student Dashboard
 
+
 </a>
+
+
+
+
 
 <a href="{{ url_for('profile') }}"
 class="btn btn-info">
 
+
 Profile
+
 
 </a>
 
+
+
+
+
 </div>
 
+
+
+
+
 </body>
+
 
 </html>

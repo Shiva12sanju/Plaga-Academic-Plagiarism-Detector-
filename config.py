@@ -3,10 +3,15 @@ import os
 
 class Config:
 
+    # =====================================
+    # BASIC CONFIG
+    # =====================================
+
     SECRET_KEY = os.environ.get(
         "SECRET_KEY",
         "dev-secret-key-change-in-production"
     )
+
 
     BASE_DIR = os.path.abspath(
         os.path.dirname(__file__)
@@ -17,8 +22,27 @@ class Config:
     # DATABASE CONFIGURATION
     # =====================================
 
-    # Render writable SQLite database location
-    SQLALCHEMY_DATABASE_URI = "sqlite:////tmp/plagiarism.db"
+    INSTANCE_DIR = os.path.join(
+        BASE_DIR,
+        "instance"
+    )
+
+
+    os.makedirs(
+        INSTANCE_DIR,
+        exist_ok=True
+    )
+
+
+    SQLALCHEMY_DATABASE_URI = (
+        "sqlite:///"
+        +
+        os.path.join(
+            INSTANCE_DIR,
+            "plagiarism.db"
+        )
+    )
+
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -67,6 +91,7 @@ class Config:
 
 
 
+
 # =====================================
 # DEVELOPMENT CONFIG
 # =====================================
@@ -77,18 +102,27 @@ class DevelopmentConfig(Config):
 
 
 
+
 # =====================================
-# PRODUCTION CONFIG
+# PRODUCTION CONFIG (Render)
 # =====================================
 
 class ProductionConfig(Config):
 
     DEBUG = False
 
+
     SECRET_KEY = os.environ.get(
         "SECRET_KEY",
         "production-secret-key"
     )
+
+
+    # Render SQLite location
+    SQLALCHEMY_DATABASE_URI = (
+        "sqlite:////tmp/plagiarism.db"
+    )
+
 
 
 

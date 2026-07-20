@@ -54,7 +54,8 @@ from models import (
     User,
     Document,
     Result,
-    Report
+    Report,
+    ActivityLog
 )
 
 
@@ -264,16 +265,36 @@ def register():
         role = request.form.get("role")
         admin_key = request.form.get("admin_key")
 
+
         # Validate role
         if role not in ["Student", "Faculty", "Admin"]:
-            flash("Invalid role selected.", "danger")
-            return render_template("register.html")
+
+            flash(
+                "Invalid role selected.",
+                "danger"
+            )
+
+            return render_template(
+                "register.html"
+            )
+
+
 
         # Validate Admin Secret Key
         if role == "Admin":
+
             if admin_key != app.config["ADMIN_SECRET_KEY"]:
-                flash("Invalid Admin Secret Key.", "danger")
-                return render_template("register.html")
+
+                flash(
+                    "Invalid Admin Secret Key.",
+                    "danger"
+                )
+
+                return render_template(
+                    "register.html"
+                )
+
+
 
         # Validate user input
         valid, msg = validate_user_input(
@@ -282,41 +303,114 @@ def register():
             password
         )
 
+
         if not valid:
-            flash(msg, "danger")
-            return render_template("register.html")
+
+            flash(
+                msg,
+                "danger"
+            )
+
+            return render_template(
+                "register.html"
+            )
+
+
 
         # Check existing email
         exists = User.query.filter_by(
             email=email
         ).first()
 
+
         if exists:
+
             flash(
                 "Email already registered",
                 "danger"
             )
-            return render_template("register.html")
+
+            return render_template(
+                "register.html"
+            )
+
+
 
         # Create new user
         user = User(
+
             fullname=name,
+
             email=email,
+
             role=role,
+
             password=password
+
         )
 
-        db.session.add(user)
-        db.session.commit()
 
-        flash(
-            "Registration successful",
-            "success"
-        )
 
-        return redirect(
-            url_for("login")
-        )
+        try:
+
+            db.session.add(user)
+
+            db.session.commit()
+
+
+
+            # Create Activity Log
+
+            activity = ActivityLog(
+
+                user_id=user.id,
+
+                action=f"{user.fullname} registered as {user.role}"
+
+            )
+
+
+            db.session.add(activity)
+
+            db.session.commit()
+
+
+
+            flash(
+
+                "Registration successful",
+
+                "success"
+
+            )
+
+
+            return redirect(
+                url_for("login")
+            )
+
+
+
+        except Exception as e:
+
+
+            db.session.rollback()
+
+
+            flash(
+
+                f"Registration failed: {str(e)}",
+
+                "danger"
+
+            )
+
+
+            return render_template(
+                "register.html"
+            )
+
+
 
     return render_template(
         "register.html"
@@ -436,13 +530,13 @@ def logout():
 
 @app.route(
     "/upload",
-    methods=["GET","POST"]
+    methods=["GET", "POST"]
 )
 @login_required
 def upload():
 
 
-    # Only Student and Faculty
+    # Only Student and Faculty can upload
 
     if current_user.role not in [
         "Student",
@@ -460,11 +554,10 @@ def upload():
 
 
 
-    if request.method=="POST":
+    if request.method == "POST":
 
 
         if "file" not in request.files:
-
 
             flash(
                 "No file selected",
@@ -477,12 +570,11 @@ def upload():
 
 
 
-        file=request.files["file"]
+        file = request.files["file"]
 
 
 
-        if file.filename=="":
-
+        if file.filename == "":
 
             flash(
                 "Please select a file",
@@ -499,12 +591,10 @@ def upload():
             file.filename
         ):
 
-
             flash(
                 "Only PDF, DOCX and TXT allowed",
                 "danger"
             )
-
 
             return redirect(
                 request.url
@@ -515,33 +605,33 @@ def upload():
         try:
 
 
+            # ============================
+            # SAVE FILE
+            # ============================
 
-            filename=secure_filename(
+
+            filename = secure_filename(
                 file.filename
             )
 
 
-
-            extension=filename.rsplit(
+            extension = filename.rsplit(
                 ".",
                 1
             )[1].lower()
 
 
 
-            if extension=="pdf":
+            if extension == "pdf":
 
-
-                folder=os.path.join(
+                folder = os.path.join(
                     app.config["UPLOAD_FOLDER"],
                     "pdfs"
                 )
 
-
             else:
 
-
-                folder=os.path.join(
+                folder = os.path.join(
                     app.config["UPLOAD_FOLDER"],
                     "documents"
                 )
@@ -555,37 +645,34 @@ def upload():
 
 
 
-            filepath=os.path.join(
+            filepath = os.path.join(
                 folder,
                 filename
             )
 
 
 
-            # avoid duplicate file names
+            # Avoid duplicate names
 
-            count=1
+            count = 1
 
 
             while os.path.exists(filepath):
 
-
-                name,ext=os.path.splitext(
+                name, ext = os.path.splitext(
                     filename
                 )
 
+                filename = f"{name}_{count}{ext}"
 
-                filename=f"{name}_{count}{ext}"
 
-
-                filepath=os.path.join(
+                filepath = os.path.join(
                     folder,
                     filename
                 )
 
 
-                count+=1
-
+                count += 1
 
 
 
@@ -594,9 +681,12 @@ def upload():
 
 
 
-            # Extract text
+            # ============================
+            # EXTRACT TEXT
+            # ============================
 
-            text=extract_text(
+
+            text = extract_text(
                 filepath
             )
 
@@ -610,7 +700,6 @@ def upload():
                     "danger"
                 )
 
-
                 return redirect(
                     request.url
                 )
@@ -618,7 +707,13 @@ def upload():
 
 
 
-            document=Document(
+
+            # ============================
+            # SAVE DOCUMENT
+            # ============================
+
+
+            document = Document(
 
                 user_id=current_user.id,
 
@@ -629,7 +724,6 @@ def upload():
             )
 
 
-
             db.session.add(document)
 
             db.session.commit()
@@ -637,24 +731,56 @@ def upload():
 
 
 
-            # plagiarism check
 
-            result=check_plagiarism_against_db(
+            # ============================
+            # ACTIVITY LOG
+            # ============================
+
+
+            activity = ActivityLog(
+
+                user_id=current_user.id,
+
+                action=f"{current_user.fullname} uploaded {filename}"
+
+            )
+
+
+            db.session.add(activity)
+
+            db.session.commit()
+
+
+
+
+
+            # ============================
+            # PLAGIARISM CHECK
+            # ============================
+
+
+            result = check_plagiarism_against_db(
                 document
             )
 
 
 
-            # save report
 
 
-            report=Report(
+            # ============================
+            # SAVE REPORT
+            # ============================
+
+
+            report = Report(
 
                 user_id=current_user.id,
 
                 filename=filename,
 
+
                 plagiarism_score=result.plagiarism_percentage,
+
 
                 ai_score=getattr(
                     result,
@@ -662,11 +788,14 @@ def upload():
                     0
                 ),
 
+
                 similarity_score=getattr(
                     result,
                     "similarity_score",
                     0
                 ),
+
+
 
                 matched_file=(
 
@@ -683,6 +812,7 @@ def upload():
                 ),
 
 
+
                 report_path=getattr(
                     result,
                     "report_path",
@@ -695,10 +825,15 @@ def upload():
 
             db.session.add(report)
 
-
             db.session.commit()
 
 
+
+
+
+            # ============================
+            # SUCCESS MESSAGE
+            # ============================
 
 
             flash(
@@ -714,7 +849,8 @@ def upload():
 
 
 
-            if current_user.role=="Student":
+
+            if current_user.role == "Student":
 
 
                 return redirect(
@@ -735,6 +871,8 @@ def upload():
 
 
 
+
+
         except Exception as e:
 
 
@@ -742,14 +880,18 @@ def upload():
 
 
             flash(
+
                 f"Upload Error : {str(e)}",
+
                 "danger"
+
             )
 
 
             return redirect(
                 request.url
             )
+
 
 
 
@@ -1358,7 +1500,7 @@ def upload_history():
         documents=documents
     )
 
-    
+
 @app.route("/my_reports")
 @login_required
 def my_reports():
@@ -1465,26 +1607,65 @@ def admin_dashboard():
         )
 
 
+    # ==========================
+    # STATISTICS
+    # ==========================
+
     total_users = User.query.count()
+
 
     total_students = User.query.filter_by(
         role="Student"
     ).count()
 
+
     total_faculty = User.query.filter_by(
         role="Faculty"
     ).count()
 
+
     total_documents = Document.query.count()
 
+
     total_results = Result.query.count()
+
 
     total_reports = Report.query.count()
 
 
+
+    # ==========================
+    # USERS LIST
+    # ==========================
+
     users = User.query.order_by(
         User.id.desc()
     ).all()
+
+
+
+    # Add upload count for each user
+
+    for user in users:
+
+        user.upload_count = Document.query.filter_by(
+            user_id=user.id
+        ).count()
+
+
+
+
+
+    # ==========================
+    # ACTIVITY LOG
+    # ==========================
+
+    activities = ActivityLog.query.order_by(
+        ActivityLog.created_at.desc()
+    ).limit(20).all()
+
+
+
 
 
     return render_template(
@@ -1503,7 +1684,9 @@ def admin_dashboard():
 
         total_reports=total_reports,
 
-        users=users
+        users=users,
+
+        activities=activities
 
     )
 
@@ -1616,11 +1799,18 @@ def delete_user(user_id):
 # GENERATE PDF REPORT
 # =====================================
 
+# =====================================
+# IMPROVED PDF REPORT
+# =====================================
+
 @app.route("/download_report/<int:result_id>")
 @login_required
 def download_report(result_id):
 
-    if current_user.role not in ["Faculty", "Admin"]:
+    if current_user.role not in [
+        "Faculty",
+        "Admin"
+    ]:
 
         flash(
             "Access denied!",
@@ -1632,14 +1822,16 @@ def download_report(result_id):
         )
 
 
-    result = Result.query.get_or_404(result_id)
+    result = Result.query.get_or_404(
+        result_id
+    )
 
 
     student = result.document1.owner
 
 
     filename = (
-        f"Student_Report_{student.id}_{result.id}.pdf"
+        f"Plagiarism_Report_{student.id}_{result.id}.pdf"
     )
 
 
@@ -1647,6 +1839,7 @@ def download_report(result_id):
         "static",
         "reports"
     )
+
 
     os.makedirs(
         report_folder,
@@ -1660,6 +1853,7 @@ def download_report(result_id):
     )
 
 
+
     document = SimpleDocTemplate(
         pdf_path,
         pagesize=letter
@@ -1668,8 +1862,12 @@ def download_report(result_id):
 
     styles = getSampleStyleSheet()
 
+
     content = []
 
+
+
+    # Title
 
     content.append(
 
@@ -1680,20 +1878,29 @@ def download_report(result_id):
 
     )
 
+
     content.append(
-        Spacer(1, 20)
+        Spacer(1,20)
     )
 
 
-    similarity = (
-        result.similarity_score or 0
+
+    # Student Information
+
+    content.append(
+
+        Paragraph(
+            "Student Information",
+            styles["Heading2"]
+        )
+
     )
 
 
-    data = [
+    student_data = [
 
         [
-            "Student Name",
+            "Name",
             student.fullname
         ],
 
@@ -1703,65 +1910,146 @@ def download_report(result_id):
         ],
 
         [
-            "Document",
+            "Role",
+            student.role
+        ],
+
+    ]
+
+
+    student_table = Table(
+        student_data
+    )
+
+
+    content.append(
+        student_table
+    )
+
+
+    content.append(
+        Spacer(1,20)
+    )
+
+
+
+    # Document Information
+
+    content.append(
+
+        Paragraph(
+            "Document Analysis",
+            styles["Heading2"]
+        )
+
+    )
+
+
+    plagiarism = (
+        result.plagiarism_percentage or 0
+    )
+
+
+    similarity = (
+        result.similarity_score or 0
+    )
+
+
+    ai_score = getattr(
+        result,
+        "ai_score",
+        0
+    )
+
+
+
+    if plagiarism < 30:
+
+        status = "ORIGINAL DOCUMENT"
+
+    elif plagiarism < 70:
+
+        status = "MODERATE SIMILARITY"
+
+    else:
+
+        status = "HIGH PLAGIARISM DETECTED"
+
+
+
+    report_data = [
+
+        [
+            "File Name",
             result.document1.filename
         ],
+
 
         [
             "Compared With",
 
             result.document2.filename
-
             if result.document2
-
             else "No Match"
         ],
+
+
+        [
+            "Plagiarism Percentage",
+            f"{plagiarism:.2f}%"
+        ],
+
 
         [
             "Similarity Score",
             f"{similarity*100:.2f}%"
         ],
 
-        [
-            "Plagiarism Percentage",
-            f"{result.plagiarism_percentage:.2f}%"
-        ],
 
         [
-            "Date",
-            result.created_at.strftime("%d-%m-%Y")
+            "AI Generated Score",
+            f"{ai_score:.2f}%"
+        ],
+
+
+        [
+            "Final Result",
+            status
+        ],
+
+
+        [
+            "Generated Date",
+            result.created_at.strftime(
+                "%d-%m-%Y"
+            )
         ]
 
     ]
 
 
-    table = Table(data)
 
-    content.append(table)
-
-    content.append(
-        Spacer(1, 20)
+    report_table = Table(
+        report_data
     )
 
 
-    if result.plagiarism_percentage < 30:
+    content.append(
+        report_table
+    )
 
-        status = "Original Document"
 
-    elif result.plagiarism_percentage < 70:
+    content.append(
+        Spacer(1,30)
+    )
 
-        status = "Moderate Similarity"
-
-    else:
-
-        status = "High Plagiarism Detected"
 
 
     content.append(
 
         Paragraph(
 
-            f"<b>Final Result:</b> {status}",
+            "Academic Integrity Statement",
 
             styles["Heading2"]
 
@@ -1770,7 +2058,25 @@ def download_report(result_id):
     )
 
 
-    document.build(content)
+
+    content.append(
+
+        Paragraph(
+
+            "This report was generated automatically "
+            "using the AI Academic Plagiarism Detection System.",
+
+            styles["BodyText"]
+
+        )
+
+    )
+
+
+
+    document.build(
+        content
+    )
 
 
     return send_file(
