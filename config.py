@@ -17,10 +17,8 @@ class Config:
     # DATABASE CONFIGURATION
     # =====================================
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "sqlite:////tmp/plagiarism.db"
-    )
+    # Render writable SQLite database location
+    SQLALCHEMY_DATABASE_URI = "sqlite:////tmp/plagiarism.db"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -88,7 +86,8 @@ class ProductionConfig(Config):
     DEBUG = False
 
     SECRET_KEY = os.environ.get(
-        "SECRET_KEY"
+        "SECRET_KEY",
+        "production-secret-key"
     )
 
 
