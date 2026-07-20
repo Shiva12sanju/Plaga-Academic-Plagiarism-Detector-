@@ -17,26 +17,10 @@ class Config:
     # DATABASE CONFIGURATION
     # =====================================
 
-    INSTANCE_DIR = os.path.join(
-        BASE_DIR,
-        "instance"
-    )
-
-    # Create instance folder automatically
-    os.makedirs(
-        INSTANCE_DIR,
-        exist_ok=True
-    )
-
-
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///" + os.path.join(
-            INSTANCE_DIR,
-            "plagiarism.db"
-        )
+        "sqlite:////tmp/plagiarism.db"
     )
-
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
