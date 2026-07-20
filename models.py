@@ -117,6 +117,16 @@ class Document(db.Model):
         db.Text,
         nullable=True
     )
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+
+    results = db.relationship(
+        "Result",
+        backref="document1"
+    )
 
     upload_date = db.Column(
         db.DateTime,

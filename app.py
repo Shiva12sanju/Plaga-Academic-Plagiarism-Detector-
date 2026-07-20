@@ -1321,7 +1321,44 @@ def report_download(result_id):
 # =====================================
 # MY REPORTS
 # =====================================
+# =====================================
+# UPLOAD HISTORY
+# =====================================
 
+@app.route("/upload_history")
+@login_required
+def upload_history():
+
+    if current_user.role != "Student":
+
+        flash(
+            "Access denied!",
+            "danger"
+        )
+
+        return redirect(
+            url_for("login")
+        )
+
+
+    documents = (
+        Document.query
+        .filter_by(
+            user_id=current_user.id
+        )
+        .order_by(
+            Document.id.desc()
+        )
+        .all()
+    )
+
+
+    return render_template(
+        "upload_history.html",
+        documents=documents
+    )
+
+    
 @app.route("/my_reports")
 @login_required
 def my_reports():

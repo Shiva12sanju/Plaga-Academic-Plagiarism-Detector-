@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="container mt-4">
+
+<h2>
+    My Upload History
+</h2>
+
+
+<table class="table table-bordered table-striped">
+
+<thead>
+
+<tr>
+
+<th>
+File Name
+</th>
+
+<th>
+Uploaded Date
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Action
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for doc in documents %}
+
+<tr>
+
+<td>
+{{ doc.filename }}
+</td>
+
+
+<td>
+{{ doc.created_at.strftime("%d-%m-%Y") }}
+</td>
+
+
+<td>
+
+{% if doc.results %}
+
+{% set result = doc.results[0] %}
+
+
+{% if result.plagiarism_percentage < 30 %}
+
+<span class="badge bg-success">
+Original
+</span>
+
+
+{% elif result.plagiarism_percentage < 70 %}
+
+<span class="badge bg-warning">
+Medium Similarity
+</span>
+
+
+{% else %}
+
+<span class="badge bg-danger">
+High Plagiarism
+</span>
+
+
+{% endif %}
+
+
+<br>
+
+Score:
+
+{{ "%.2f"|format(result.plagiarism_percentage) }}%
+
+
+{% else %}
+
+<span class="badge bg-secondary">
+Checking...
+</span>
+
+{% endif %}
+
+
+</td>
+
+
+<td>
+
+<a href="{{ url_for('upload') }}"
+class="btn btn-primary btn-sm">
+
+Upload New
+
+</a>
+
+
+</td>
+
+
+</tr>
+
+
+{% else %}
+
+<tr>
+
+<td colspan="4">
+
+No documents uploaded yet.
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+{% endblock %}
