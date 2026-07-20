@@ -107,8 +107,19 @@ app.config["MAX_CONTENT_LENGTH"] = (
 # =====================================
 
 
+# =====================================
+# DATABASE INITIALIZATION
+# =====================================
+
 db.init_app(app)
 
+
+# Create database tables automatically
+with app.app_context():
+
+    db.create_all()
+
+    print("✓ Database tables created")
 
 
 # =====================================
