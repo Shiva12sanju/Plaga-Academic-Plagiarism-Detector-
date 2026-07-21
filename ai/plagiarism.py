@@ -1,173 +1,521 @@
 import os
+from difflib import SequenceMatcher
+
 from models import db, Document, Embedding, Result
-from ai.embeddings import generate_embedding, serialize_embedding, deserialize_embedding
+
+from ai.embeddings import (
+    generate_embedding,
+    serialize_embedding,
+    deserialize_embedding
+)
+
+from ai.document_analysis import writing_quality
+from ai.sentence_matcher import compare_sentences
 from ai.similarity import cosine_similarity
+
 from ai.report_generator import generate_pdf_report
+
 from utils.helper import split_into_paragraphs
 
-def get_or_create_embedding(document):
-    """
-    Checks if an embedding already exists in the database for the given document.
-    If not, generates it and saves it.
-    Returns the numpy array representation of the embedding.
-    """
-    existing_emb = Embedding.query.filter_by(document_id=document.id).first()
-    if existing_emb:
-        return deserialize_embedding(existing_emb.embedding)
-        
-    # Generate new embedding
-    print(f"Generating embedding for document {document.id} ({document.filename})...")
-    np_emb = generate_embedding(document.extracted_text)
-    serialized = serialize_embedding(np_emb)
-    
-    new_emb = Embedding(document_id=document.id, embedding=serialized)
-    db.session.add(new_emb)
-    db.session.commit()
-    
-    return np_emb
+from ai.text_processing import (
+    clean_text,
+    split_sentences,
+    extract_keywords
+)
 
-def check_plagiarism_between_two(doc1, doc2):
-    """
-    Compares two documents and calculates plagiarism percentage and returns a Result object.
-    """
+
+# =====================================================
+# EMBEDDING HANDLER
+# =====================================================
+
+def get_or_create_embedding(document):
+
+    existing = Embedding.query.filter_by(
+        document_id=document.id
+    ).first()
+
+    if existing:
+        return deserialize_embedding(
+            existing.embedding
+        )
+
+    print(
+        f"Generating embedding for {document.filename}"
+    )
+
+    embedding = generate_embedding(
+        document.extracted_text
+    )
+
+    db.session.add(
+        Embedding(
+            document_id=document.id,
+            embedding=serialize_embedding(embedding)
+        )
+    )
+
+    db.session.commit()
+
+    return embedding
+
+
+
+# =====================================================
+# TEXT SIMILARITY
+# =====================================================
+
+def sentence_similarity(text1, text2):
+
+    sentences1 = split_sentences(
+        clean_text(text1)
+    )
+
+    sentences2 = split_sentences(
+        clean_text(text2)
+    )
+
+
+    if not sentences1 or not sentences2:
+        return 0
+
+
+    matches = 0
+
+
+    for s1 in sentences1:
+
+        best = 0
+
+
+        for s2 in sentences2:
+
+            score = SequenceMatcher(
+                None,
+                s1,
+                s2
+            ).ratio()
+
+
+            best = max(
+                best,
+                score
+            )
+
+
+        if best >= 0.80:
+            matches += 1
+
+
+    return matches / len(sentences1)
+
+
+
+def keyword_similarity(text1,text2):
+
+    k1 = set(
+        extract_keywords(text1)
+    )
+
+    k2 = set(
+        extract_keywords(text2)
+    )
+
+
+    if not k1 or not k2:
+        return 0
+
+
+    return len(k1 & k2) / len(k1 | k2)
+
+
+
+def overall_similarity(doc1,doc2):
+
     emb1 = get_or_create_embedding(doc1)
+
     emb2 = get_or_create_embedding(doc2)
-    
-    score = cosine_similarity(emb1, emb2)
-    plag_percentage = round(score * 100, 2)
-    if plag_percentage < 0:
-        plag_percentage = 0.0
-        
+
+
+    semantic = cosine_similarity(
+        emb1,
+        emb2
+    )
+
+
+    sentence = sentence_similarity(
+        doc1.extracted_text,
+        doc2.extracted_text
+    )
+
+
+    keyword = keyword_similarity(
+        doc1.extracted_text,
+        doc2.extracted_text
+    )
+
+
+    score = (
+        semantic * 0.60
+        +
+        sentence * 0.25
+        +
+        keyword * 0.15
+    )
+
+
+    return round(score,4)
+
+
+
+# =====================================================
+# TWO DOCUMENT CHECK
+# =====================================================
+
+def check_plagiarism_between_two(doc1,doc2):
+
+
+    score = overall_similarity(
+        doc1,
+        doc2
+    )
+
+
+    percentage = round(
+        score * 100,
+        2
+    )
+
+
     result = Result(
         document1_id=doc1.id,
         document2_id=doc2.id,
         similarity_score=score,
-        plagiarism_percentage=plag_percentage
+        plagiarism_percentage=percentage
     )
+
+
     db.session.add(result)
+
     db.session.commit()
-    
-    # Generate report path
+
+
+
+    matching_paragraphs = find_matching_paragraphs(
+        doc1.extracted_text,
+        doc2.extracted_text
+    )
+
+
+    matching_sentences = compare_sentences(
+        doc1.extracted_text,
+        doc2.extracted_text
+    )
+
+
     from flask import current_app
-    report_filename = f"report_{result.id}_{doc1.id}_vs_{doc2.id}.pdf"
-    report_path = os.path.join(current_app.config['REPORTS_FOLDER'], report_filename)
-    
-    # Analyze matching paragraphs
-    matching_paragraphs = find_matching_paragraphs(doc1.extracted_text, doc2.extracted_text)
-    
-    # Generate report
-    generate_pdf_report(report_path, doc1, doc2, plag_percentage, matching_paragraphs)
-    
-    result.report_path = report_path
+
+
+    os.makedirs(
+        current_app.config["REPORTS_FOLDER"],
+        exist_ok=True
+    )
+
+
+    filename = (
+        f"report_{result.id}_"
+        f"{doc1.id}_vs_{doc2.id}.pdf"
+    )
+
+
+    path = os.path.join(
+        current_app.config["REPORTS_FOLDER"],
+        filename
+    )
+
+
+    generate_pdf_report(
+        path,
+        doc1,
+        doc2,
+        percentage,
+        matching_paragraphs,
+        matching_sentences
+    )
+
+
+    result.report_path = path
+
     db.session.commit()
-    
+
+
     return result
 
+
+
+
+# =====================================================
+# DATABASE COMPARISON
+# =====================================================
+
+
 def check_plagiarism_against_db(new_doc):
-    """
-    Compares a new document against all other documents in the database.
-    Finds the one with highest similarity, stores the result, and returns it.
-    """
-    other_docs = Document.query.filter(Document.id != new_doc.id).all()
-    
-    if not other_docs:
-        # No other documents to compare against — still generate a basic report
+
+
+    documents = Document.query.filter(
+        Document.id != new_doc.id
+    ).all()
+
+
+
+    if not documents:
+
+
         result = Result(
             document1_id=new_doc.id,
             document2_id=None,
-            similarity_score=0.0,
-            plagiarism_percentage=0.0
+            similarity_score=0,
+            plagiarism_percentage=0
         )
+
+
         db.session.add(result)
+
         db.session.commit()
 
-        # Ensure reports folder exists and generate a simple report
+
+
+        analysis = writing_quality(
+            new_doc.extracted_text
+        )
+
+
+        print(
+            analysis
+        )
+
+
+
         from flask import current_app
-        os.makedirs(current_app.config.get('REPORTS_FOLDER', 'reports'), exist_ok=True)
-        report_filename = f"report_{result.id}_{new_doc.id}_vs_0.pdf"
-        report_path = os.path.join(current_app.config.get('REPORTS_FOLDER', 'reports'), report_filename)
 
-        # Generate a minimal report (report_generator will fallback to text if ReportLab missing)
-        generate_pdf_report(report_path, new_doc, None, 0.0, [])
 
-        result.report_path = report_path
+        os.makedirs(
+            current_app.config["REPORTS_FOLDER"],
+            exist_ok=True
+        )
+
+
+        path = os.path.join(
+            current_app.config["REPORTS_FOLDER"],
+            f"report_{result.id}_{new_doc.id}.pdf"
+        )
+
+
+        generate_pdf_report(
+            path,
+            new_doc,
+            None,
+            0,
+            []
+        )
+
+
+        result.report_path = path
+
         db.session.commit()
+
+
         return result
-        
-    emb_new = get_or_create_embedding(new_doc)
-    
-    best_match_doc = None
-    max_score = -1.0
-    
-    for other_doc in other_docs:
-        emb_other = get_or_create_embedding(other_doc)
-        score = cosine_similarity(emb_new, emb_other)
-        if score > max_score:
-            max_score = score
-            best_match_doc = other_doc
-            
-    # Calculate percentage
-    plag_percentage = round(max_score * 100, 2)
-    if plag_percentage < 0:
-        plag_percentage = 0.0
-        
-    result = Result(
-        document1_id=new_doc.id,
-        document2_id=best_match_doc.id if best_match_doc else None,
-        similarity_score=max_score,
-        plagiarism_percentage=plag_percentage
+
+
+
+
+    best_document = None
+
+    highest_score = 0
+
+
+
+    for doc in documents:
+
+
+        score = overall_similarity(
+            new_doc,
+            doc
+        )
+
+
+        if score > highest_score:
+
+            highest_score = score
+
+            best_document = doc
+
+
+
+
+    percentage = round(
+        highest_score * 100,
+        2
     )
+
+
+
+    result = Result(
+
+        document1_id=new_doc.id,
+
+        document2_id=(
+            best_document.id
+            if best_document
+            else None
+        ),
+
+        similarity_score=highest_score,
+
+        plagiarism_percentage=percentage
+    )
+
+
+
     db.session.add(result)
+
     db.session.commit()
-    
-    # Generate report path
+
+
+
+    paragraphs = []
+
+    sentences = []
+
+
+
+    if best_document:
+
+
+        paragraphs = find_matching_paragraphs(
+            new_doc.extracted_text,
+            best_document.extracted_text
+        )
+
+
+        sentences = compare_sentences(
+            new_doc.extracted_text,
+            best_document.extracted_text
+        )
+
+
+
     from flask import current_app
-    report_filename = f"report_{result.id}_{new_doc.id}_vs_{best_match_doc.id if best_match_doc else 0}.pdf"
-    report_path = os.path.join(current_app.config['REPORTS_FOLDER'], report_filename)
-    
-    # Analyze matching paragraphs
-    matching_paragraphs = []
-    if best_match_doc:
-        matching_paragraphs = find_matching_paragraphs(new_doc.extracted_text, best_match_doc.extracted_text)
-        
-    # Generate report
-    generate_pdf_report(report_path, new_doc, best_match_doc, plag_percentage, matching_paragraphs)
-    
-    result.report_path = report_path
+
+
+    os.makedirs(
+        current_app.config["REPORTS_FOLDER"],
+        exist_ok=True
+    )
+
+
+    path = os.path.join(
+        current_app.config["REPORTS_FOLDER"],
+        f"report_{result.id}.pdf"
+    )
+
+
+
+    generate_pdf_report(
+        path,
+        new_doc,
+        best_document,
+        percentage,
+        paragraphs,
+        sentences
+    )
+
+
+    result.report_path = path
+
     db.session.commit()
-    
+
+
+
     return result
 
-def find_matching_paragraphs(text1, text2, threshold=0.65):
-    """
-    Compares individual paragraphs in text1 to those in text2 using cosine similarity.
-    Returns a list of dictionaries with matching paragraphs and their scores.
-    """
+
+
+
+
+# =====================================================
+# PARAGRAPH MATCHING
+# =====================================================
+
+
+def find_matching_paragraphs(
+        text1,
+        text2,
+        threshold=0.65
+):
+
+
     paras1 = split_into_paragraphs(text1)
+
     paras2 = split_into_paragraphs(text2)
-    
+
+
     matches = []
-    if not paras1 or not paras2:
-        return matches
-        
-    # Standard sentence transformer or fallback encoding
+
+
     for p1 in paras1:
-        emb1 = generate_embedding(p1)
-        best_match_p2 = None
-        best_score = 0.0
-        
+
+
+        emb1 = generate_embedding(
+            p1
+        )
+
+
+        best_score = 0
+
+        best_match = None
+
+
+
         for p2 in paras2:
-            emb2 = generate_embedding(p2)
-            score = cosine_similarity(emb1, emb2)
+
+
+            emb2 = generate_embedding(
+                p2
+            )
+
+
+            score = cosine_similarity(
+                emb1,
+                emb2
+            )
+
+
+
             if score > best_score:
+
                 best_score = score
-                best_match_p2 = p2
-                
+
+                best_match = p2
+
+
+
         if best_score >= threshold:
+
+
             matches.append({
-                'source_paragraph': p1,
-                'matching_paragraph': best_match_p2,
-                'score': round(best_score * 100, 2)
+
+                "source_paragraph":p1,
+
+                "matching_paragraph":best_match,
+
+                "score":round(
+                    best_score*100,
+                    2
+                )
+
             })
-            
+
+
+
     return matches

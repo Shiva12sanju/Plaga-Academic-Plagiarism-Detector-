@@ -1,170 +1,399 @@
 import os
 from datetime import datetime
 
-def generate_pdf_report(report_path, doc1, doc2, plagiarism_percentage, matching_paragraphs=None):
+
+def generate_pdf_report(
+    report_path,
+    doc1,
+    doc2,
+    plagiarism_percentage,
+    matching_paragraphs=None,
+    matching_sentences=None
+):
     """
-    Generates a PDF report using reportlab and saves it to report_path.
-    If reportlab is not installed, it writes a basic text report as a fallback.
+    Generates a plagiarism PDF report.
+    Falls back to text report if ReportLab is unavailable.
     """
+
     if matching_paragraphs is None:
         matching_paragraphs = []
-        
+
+    if matching_sentences is None:
+        matching_sentences = []
+
     try:
+
         from reportlab.lib.pagesizes import letter
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import (
+            SimpleDocTemplate,
+            Paragraph,
+            Spacer,
+            Table,
+            TableStyle
+        )
+
+        from reportlab.lib.styles import (
+            getSampleStyleSheet,
+            ParagraphStyle
+        )
+
         from reportlab.lib import colors
-        
-        # Setup document
+
         doc = SimpleDocTemplate(
             report_path,
             pagesize=letter,
-            rightMargin=54, leftMargin=54,
-            topMargin=54, bottomMargin=54
+            rightMargin=40,
+            leftMargin=40,
+            topMargin=40,
+            bottomMargin=40
         )
-        
+
         styles = getSampleStyleSheet()
-        
-        # Custom styles
+
         title_style = ParagraphStyle(
-            'ReportTitle',
-            parent=styles['Heading1'],
-            fontName='Helvetica-Bold',
-            fontSize=24,
+            "Title",
+            parent=styles["Heading1"],
+            fontSize=22,
             leading=28,
-            textColor=colors.HexColor("#2C3E50"),
-            spaceAfter=12
+            textColor=colors.darkblue,
+            spaceAfter=15
         )
-        
-        subtitle_style = ParagraphStyle(
-            'ReportSubtitle',
-            parent=styles['Normal'],
-            fontName='Helvetica',
-            fontSize=10,
-            leading=14,
-            textColor=colors.HexColor("#7F8C8D"),
-            spaceAfter=20
-        )
-        
-        heading2_style = ParagraphStyle(
-            'SectionHeading',
-            parent=styles['Heading2'],
-            fontName='Helvetica-Bold',
-            fontSize=16,
-            leading=20,
-            textColor=colors.HexColor("#2C3E50"),
-            spaceBefore=15,
+
+        heading_style = ParagraphStyle(
+            "Heading",
+            parent=styles["Heading2"],
+            fontSize=15,
+            leading=18,
+            textColor=colors.darkred,
             spaceAfter=10
         )
-        
+
         body_style = ParagraphStyle(
-            'Body',
-            parent=styles['BodyText'],
-            fontName='Helvetica',
+            "Body",
+            parent=styles["BodyText"],
             fontSize=10,
-            leading=14,
-            textColor=colors.HexColor("#34495E")
+            leading=15
         )
-        
-        bold_body_style = ParagraphStyle(
-            'BoldBody',
+
+        bold_style = ParagraphStyle(
+            "Bold",
             parent=body_style,
-            fontName='Helvetica-Bold'
+            fontName="Helvetica-Bold"
         )
 
         story = []
-        
-        # Title
-        story.append(Paragraph("Plagiarism Analysis Report", title_style))
-        story.append(Paragraph(f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", subtitle_style))
-        story.append(Spacer(1, 10))
-        
-        # Summary Box Data
-        score_color = "#E74C3C" # Red
-        if plagiarism_percentage < 20:
-            score_color = "#2ECC71" # Green
-        elif plagiarism_percentage < 50:
-            score_color = "#F39C12" # Orange
-            
-        summary_data = [
-            [Paragraph("Document Audited:", bold_body_style), Paragraph(doc1.filename, body_style)],
-            [Paragraph("Compared Against:", bold_body_style), Paragraph(doc2.filename if doc2 else "Database Repository", body_style)],
-            [Paragraph("Overall Plagiarism Score:", bold_body_style), Paragraph(f"<font color='{score_color}'><b>{plagiarism_percentage}%</b></font>", bold_body_style)]
-        ]
-        
-        summary_table = Table(summary_data, colWidths=[150, 350])
-        summary_table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F8F9FA")),
-            ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#E2E8F0")),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('PADDING', (0,0), (-1,-1), 10),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ]))
-        
-        story.append(summary_table)
+
+        ###################################################
+        # TITLE
+        ###################################################
+
+        story.append(
+            Paragraph(
+                "Academic Plagiarism Detection Report",
+                title_style
+            )
+        )
+
+        story.append(
+            Paragraph(
+                datetime.now().strftime(
+                    "%d-%m-%Y %H:%M:%S"
+                ),
+                body_style
+            )
+        )
+
         story.append(Spacer(1, 20))
-        
-        # Findings Section
-        story.append(Paragraph("Plagiarism Analysis Findings", heading2_style))
-        if plagiarism_percentage == 0:
-            story.append(Paragraph("No significant plagiarism detected. The document is unique based on comparison algorithms.", body_style))
+
+        ###################################################
+        # SUMMARY
+        ###################################################
+
+        if plagiarism_percentage < 20:
+            color = "green"
+
+        elif plagiarism_percentage < 50:
+            color = "orange"
+
         else:
-            story.append(Paragraph(f"The analysis detected that {plagiarism_percentage}% of the document contains matches or significant similarity with previously uploaded documents.", body_style))
-        story.append(Spacer(1, 15))
-        
-        # Matching Paragraphs Detail
-        if matching_paragraphs:
-            story.append(Paragraph("Detailed Paragraph Matches", heading2_style))
-            
-            for idx, match in enumerate(matching_paragraphs, 1):
-                match_header_style = ParagraphStyle(
-                    f'MatchHeader_{idx}',
-                    parent=body_style,
-                    fontName='Helvetica-Bold',
-                    textColor=colors.HexColor("#2980B9")
-                )
-                
-                story.append(Paragraph(f"Match #{idx} (Similarity: {match['score']}%):", match_header_style))
-                story.append(Spacer(1, 5))
-                
-                # Table for paragraphs side-by-side
-                p_table_data = [
-                    [Paragraph("<b>Source Document</b>", bold_body_style), Paragraph("<b>Matched Document</b>", bold_body_style)],
-                    [Paragraph(match['source_paragraph'], body_style), Paragraph(match['matching_paragraph'], body_style)]
+            color = "red"
+
+        table = Table(
+
+            [
+
+                [
+                    "Uploaded File",
+                    doc1.filename
+                ],
+
+                [
+                    "Matched File",
+                    doc2.filename if doc2 else "No Match"
+                ],
+
+                [
+                    "Plagiarism",
+                    f"{plagiarism_percentage}%"
                 ]
-                p_table = Table(p_table_data, colWidths=[245, 245])
-                p_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#EDF2F7")),
-                    ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor("#CBD5E0")),
-                    ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                    ('PADDING', (0,0), (-1,-1), 8),
-                ]))
-                story.append(p_table)
+
+            ],
+
+            colWidths=[170, 300]
+
+        )
+
+        table.setStyle(
+
+            TableStyle(
+
+                [
+
+                    ("GRID", (0, 0), (-1, -1), 1, colors.grey),
+
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+
+                    ("BACKGROUND", (0, 1), (0, -1), colors.whitesmoke),
+
+                    ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+
+                ]
+
+            )
+
+        )
+
+        story.append(table)
+
+        story.append(Spacer(1, 20))
+
+        ###################################################
+        # RESULT
+        ###################################################
+
+        story.append(
+            Paragraph(
+                "Analysis",
+                heading_style
+            )
+        )
+
+        story.append(
+
+            Paragraph(
+
+                f"<font color='{color}'>"
+
+                f"<b>{plagiarism_percentage}% plagiarism detected.</b>"
+
+                "</font>",
+
+                body_style
+
+            )
+
+        )
+
+        story.append(Spacer(1, 20))
+
+        ###################################################
+        # MATCHED PARAGRAPHS
+        ###################################################
+
+        if matching_paragraphs:
+
+            story.append(
+                Paragraph(
+                    "Matched Paragraphs",
+                    heading_style
+                )
+            )
+
+            for i, item in enumerate(
+                matching_paragraphs,
+                start=1
+            ):
+
+                story.append(
+
+                    Paragraph(
+
+                        f"<b>Paragraph {i}</b> "
+                        f"({item['score']}%)",
+
+                        bold_style
+
+                    )
+
+                )
+
+                story.append(
+
+                    Paragraph(
+
+                        item["source_paragraph"],
+
+                        body_style
+
+                    )
+
+                )
+
+                story.append(Spacer(1, 5))
+
+                story.append(
+
+                    Paragraph(
+
+                        item["matching_paragraph"],
+
+                        body_style
+
+                    )
+
+                )
+
                 story.append(Spacer(1, 15))
-        
-        # Build Document
+
+        ###################################################
+        # MATCHED SENTENCES
+        ###################################################
+
+        if matching_sentences:
+
+            story.append(
+                Paragraph(
+                    "Matched Sentences",
+                    heading_style
+                )
+            )
+
+            story.append(Spacer(1, 10))
+
+            for item in matching_sentences:
+
+                story.append(
+
+                    Paragraph(
+
+                        f"<font color='red'><b>Student:</b></font> "
+                        f"{item['sentence']}",
+
+                        body_style
+
+                    )
+
+                )
+
+                story.append(
+
+                    Paragraph(
+
+                        f"<b>Matched ({item['similarity']}%)</b>",
+
+                        bold_style
+
+                    )
+
+                )
+
+                story.append(
+
+                    Paragraph(
+
+                        item["matched_sentence"],
+
+                        body_style
+
+                    )
+
+                )
+
+                story.append(
+                    Spacer(1, 10)
+                )
+
+        ###################################################
+        # END
+        ###################################################
+
+        story.append(Spacer(1, 20))
+
+        story.append(
+
+            Paragraph(
+
+                "Generated by AI Academic Plagiarism Detector",
+
+                body_style
+
+            )
+
+        )
+
         doc.build(story)
-        print(f"Report successfully generated at: {report_path}")
-        
+
+        print("PDF Report Generated")
+
     except ImportError:
-        # Fallback to Text report if reportlab is not available
-        print("ReportLab is not installed. Creating plain-text report fallback.")
-        with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("="*60 + "\n")
-            f.write("             PLAGIARISM ANALYSIS REPORT\n")
-            f.write("="*60 + "\n")
-            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Source Document: {doc1.filename}\n")
-            f.write(f"Target Document: {doc2.filename if doc2 else 'Database Repository'}\n")
-            f.write(f"Plagiarism Score: {plagiarism_percentage}%\n\n")
-            f.write("="*60 + "\n")
-            f.write("DETAILED MATCHES:\n")
-            f.write("="*60 + "\n")
-            for idx, match in enumerate(matching_paragraphs, 1):
-                f.write(f"\nMatch #{idx} (Similarity: {match['score']}%):\n")
-                f.write(f"Source: {match['source_paragraph']}\n")
-                f.write(f"Matched: {match['matching_paragraph']}\n")
-                f.write("-"*60 + "\n")
+
+        with open(
+            report_path,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            f.write("PLAGIARISM REPORT\n")
+            f.write("=" * 50 + "\n")
+            f.write(
+                f"Generated : {datetime.now()}\n"
+            )
+            f.write(
+                f"Uploaded : {doc1.filename}\n"
+            )
+            f.write(
+                f"Matched : {doc2.filename if doc2 else 'No Match'}\n"
+            )
+            f.write(
+                f"Plagiarism : {plagiarism_percentage}%\n\n"
+            )
+
+            f.write(
+                "Matched Paragraphs\n"
+            )
+
+            for item in matching_paragraphs:
+
+                f.write(
+                    "-" * 50 + "\n"
+                )
+
+                f.write(
+                    item["source_paragraph"] + "\n\n"
+                )
+
+                f.write(
+                    item["matching_paragraph"] + "\n\n"
+                )
+
+            if matching_sentences:
+
+                f.write("\nMatched Sentences\n")
+
+                for item in matching_sentences:
+
+                    f.write("-" * 50 + "\n")
+
+                    f.write(
+                        item["sentence"] + "\n"
+                    )
+
+                    f.write(
+                        item["matched_sentence"] + "\n"
+                    )
+
     except Exception as e:
-        print(f"Error generating report: {e}")
+
+        print(e)

@@ -491,66 +491,37 @@ Current User
 
 <hr class="my-5">
 
-
-
-
-
 <h3 class="mb-3">
-
-Quick Actions
-
+⚡ Admin Quick Actions
 </h3>
 
+<div class="row g-3">
 
+    <div class="col-md-3">
+        <a href="{{ url_for('analytics') }}" class="btn btn-success w-100 p-3">
+            📊 Analytics
+        </a>
+    </div>
 
+    <div class="col-md-3">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-primary w-100 p-3">
+            👥 Manage Users
+        </a>
+    </div>
 
-<a href="{{ url_for('upload') }}"
-class="btn btn-primary">
+    <div class="col-md-3">
+        <a href="{{ url_for('profile') }}" class="btn btn-info w-100 p-3">
+            👤 My Profile
+        </a>
+    </div>
 
+    <div class="col-md-3">
+        <a href="{{ url_for('logout') }}" class="btn btn-danger w-100 p-3">
+            🚪 Logout
+        </a>
+    </div>
 
-Upload Document
-
-
-</a>
-
-
-
-
-
-<a href="{{ url_for('faculty_dashboard') }}"
-class="btn btn-success">
-
-
-Faculty Dashboard
-
-
-</a>
-
-
-
-
-
-<a href="{{ url_for('student_dashboard') }}"
-class="btn btn-warning">
-
-
-Student Dashboard
-
-
-</a>
-
-
-
-
-
-<a href="{{ url_for('profile') }}"
-class="btn btn-info">
-
-
-Profile
-
-
-</a>
+</div>
 
 
 

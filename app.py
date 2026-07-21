@@ -222,7 +222,7 @@ def index():
             )
 
 
-        elif current_user.role == "Faculty":
+        elif current_user.role == "faculty":
 
             return redirect(
                 url_for(
@@ -466,7 +466,7 @@ def login():
                 )
 
 
-            elif user.role=="Faculty":
+            elif user.role=="faculty":
 
                 return redirect(
                     url_for(
@@ -540,7 +540,8 @@ def upload():
 
     if current_user.role not in [
         "Student",
-        "Faculty"
+        "Faculty",
+        "Admin"
     ]:
 
         flash(
@@ -908,91 +909,69 @@ def upload():
 # =====================================
 
 
+
+
 @app.route(
     "/student_dashboard"
 )
-
 @login_required
 def student_dashboard():
 
-
-
-    if current_user.role!="Student":
-
+    # Allow Student and Admin
+    if current_user.role not in [
+        "Student",
+        "Admin"
+    ]:
 
         flash(
             "Access denied",
             "danger"
         )
 
-
         return redirect(
             url_for("login")
         )
 
-
-
-
-    total_docs=Document.query.filter_by(
-
+    total_docs = Document.query.filter_by(
         user_id=current_user.id
-
     ).count()
 
-
-
-
-    results=(
+    results = (
 
         Result.query
 
         .join(
             Document,
-            Result.document1_id==Document.id
+            Result.document1_id == Document.id
         )
 
         .filter(
-            Document.user_id==current_user.id
+            Document.user_id == current_user.id
         )
 
         .all()
 
     )
 
-
-
-    total_results=len(results)
-
-
-
+    total_results = len(results)
 
     if total_results:
 
-
-        avg_plagiarism=round(
+        avg_plagiarism = round(
 
             sum(
-
                 r.plagiarism_percentage
-
                 for r in results
-
             )
-
-            /
-            total_results,
+            / total_results,
 
             2
 
         )
 
-
     else:
 
-        avg_plagiarism=0
-
-
-
+        avg_plagiarism = 0
 
     return render_template(
 
@@ -1011,128 +990,72 @@ def student_dashboard():
 
 
 
+
 # =====================================
 # FACULTY DASHBOARD
 # =====================================
 
-
-@app.route(
-    "/faculty_dashboard"
-)
-
+@app.route("/faculty_dashboard")
 @login_required
-
 def faculty_dashboard():
 
-
-
-    if current_user.role!="Faculty":
-
+    if current_user.role not in [
+        "Faculty",
+        "Admin"
+    ]:
 
         flash(
             "Access denied",
             "danger"
         )
 
-
         return redirect(
             url_for("login")
         )
 
-
-
-
-    search=request.args.get(
+    search = request.args.get(
         "search",
         ""
     )
 
-
-
-
     if search:
 
+        students = User.query.filter(
 
-        students=User.query.filter(
-
-            User.role=="Student",
+            User.role == "Student",
 
             (
-
-                User.fullname.ilike(
-                    f"%{search}%"
-                )
-
+                User.fullname.ilike(f"%{search}%")
                 |
-
-                User.email.ilike(
-                    f"%{search}%"
-                )
-
+                User.email.ilike(f"%{search}%")
             )
 
         ).all()
 
-
-
     else:
 
-
-        students=User.query.filter_by(
-
+        students = User.query.filter_by(
             role="Student"
-
         ).all()
 
-
-
-
-
-    total_students=User.query.filter_by(
-
+    total_students = User.query.filter_by(
         role="Student"
-
     ).count()
 
+    total_documents = Document.query.count()
 
+    total_reports = Report.query.count()
 
-
-    total_documents=Document.query.count()
-
-
-
-    total_reports=Report.query.count()
-
-
-
-
-    avg_plagiarism=db.session.query(
-
-        func.avg(
-            Report.plagiarism_score
-        )
-
+    avg_plagiarism = db.session.query(
+        func.avg(Report.plagiarism_score)
     ).scalar()
 
-
-
     if avg_plagiarism is None:
+        avg_plagiarism = 0
 
-        avg_plagiarism=0
-
-
-
-
-
-    faculty_reports=Report.query.order_by(
-
+    faculty_reports = Report.query.order_by(
         Report.upload_date.desc()
-
     ).all()
-
-
-
-
 
     return render_template(
 
@@ -1146,10 +1069,7 @@ def faculty_dashboard():
 
         total_reports=total_reports,
 
-        avg_plagiarism=round(
-            avg_plagiarism,
-            2
-        ),
+        avg_plagiarism=round(avg_plagiarism, 2),
 
         faculty_reports=faculty_reports
 
@@ -1163,7 +1083,15 @@ def faculty_dashboard():
 @login_required
 def analytics():
 
-    if current_user.role != "Faculty":
+    print(
+        "USER:",
+        current_user.fullname,
+        "ROLE:",
+        current_user.role
+    )
+
+    # Faculty access check
+    if not current_user.role or current_user.role.strip().lower() != "faculty":
 
         flash(
             "Access denied!",
@@ -1175,22 +1103,28 @@ def analytics():
         )
 
 
+    # Total number of students
     total_students = User.query.filter_by(
         role="Student"
     ).count()
 
 
+    # Total uploaded documents
     total_documents = Document.query.count()
 
 
+    # Total plagiarism checks performed
     total_checks = Result.query.count()
 
 
+    # Average plagiarism percentage
     avg_plagiarism = db.session.query(
         func.avg(Result.plagiarism_percentage)
     ).scalar() or 0
 
 
+
+    # Student-wise plagiarism average
     student_data = (
         db.session.query(
             User.fullname,
@@ -1204,7 +1138,10 @@ def analytics():
             Result,
             Document.id == Result.document1_id
         )
-        .group_by(User.id)
+        .group_by(
+            User.id,
+            User.fullname
+        )
         .all()
     )
 
@@ -1215,15 +1152,17 @@ def analytics():
 
     for name, score in student_data:
 
-        student_names.append(name)
+        student_names.append(
+            name
+        )
 
         student_scores.append(
             round(score or 0, 2)
         )
 
 
-    return render_template(
 
+    return render_template(
         "analytics.html",
 
         total_students=total_students,
@@ -1240,9 +1179,7 @@ def analytics():
         student_names=student_names,
 
         student_scores=student_scores
-
     )
-
 
 
 # =====================================
