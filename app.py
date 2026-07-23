@@ -43,7 +43,7 @@ from reportlab.platypus import (
 )
 
 from reportlab.lib.styles import getSampleStyleSheet
-
+import traceback
 
 
 from config import config
@@ -63,6 +63,10 @@ from utils.validators import (
     allowed_file,
     validate_user_input
 )
+from werkzeug.security import generate_password_hash
+
+from werkzeug.security import generate_password_hash
+
 
 
 from utils.pdf_reader import extract_text
@@ -91,6 +95,8 @@ env = os.environ.get(
 app.config.from_object(
     config[env]
 )
+print("FLASK_ENV =", env)
+print("DATABASE =", app.config["SQLALCHEMY_DATABASE_URI"])
 # Admin Secret Key
 app.config["ADMIN_SECRET_KEY"] = "SHIVU@2026"
 
@@ -222,7 +228,7 @@ def index():
             )
 
 
-        elif current_user.role == "faculty":
+        elif current_user.role.lower() == "faculty":
 
             return redirect(
                 url_for(
@@ -260,7 +266,7 @@ def register():
     if request.method == "POST":
 
         name = request.form.get("name")
-        email = request.form.get("email")
+        email = request.form.get("email").strip().lower()
         password = request.form.get("password")
         role = request.form.get("role")
         admin_key = request.form.get("admin_key")
@@ -433,9 +439,8 @@ def login():
     if request.method=="POST":
 
 
-        email=request.form.get(
-            "email"
-        )
+        email = request.form.get("email").strip().lower()
+        
 
 
         password=request.form.get(
@@ -466,7 +471,7 @@ def login():
                 )
 
 
-            elif user.role=="faculty":
+            elif user.role.lower() == "faculty":
 
                 return redirect(
                     url_for(
@@ -538,9 +543,9 @@ def upload():
 
     # Only Student and Faculty can upload
 
-    if current_user.role not in [
-        "Student",
-        "Faculty",
+    if current_user.role.lower() not in [
+        "student",
+        "faculty",
         "Admin"
     ]:
 
@@ -678,6 +683,7 @@ def upload():
 
 
             file.save(filepath)
+            print("File saved successfully")
 
 
 
@@ -690,6 +696,7 @@ def upload():
             text = extract_text(
                 filepath
             )
+            print("Text extracted")
 
 
 
@@ -728,7 +735,7 @@ def upload():
             db.session.add(document)
 
             db.session.commit()
-
+            print(" Document saved")
 
 
 
@@ -763,6 +770,7 @@ def upload():
             result = check_plagiarism_against_db(
                 document
             )
+            print("Plagiarism completed")
 
 
 
@@ -877,16 +885,13 @@ def upload():
         except Exception as e:
 
 
+            traceback.print_exc()
+
+
             db.session.rollback()
 
 
-            flash(
-
-                f"Upload Error : {str(e)}",
-
-                "danger"
-
-            )
+            flash(str(e), "danger")
 
 
             return redirect(
@@ -1091,7 +1096,7 @@ def analytics():
     )
 
     # Faculty access check
-    if not current_user.role or current_user.role.strip().lower() != "faculty":
+    if current_user.role.lower() not in ["faculty", "admin"]:
 
         flash(
             "Access denied!",
@@ -1258,6 +1263,8 @@ def report(result_id):
 
 
     return render_template(
+
+        
 
         "report.html",
 
@@ -2035,6 +2042,30 @@ def profile():
         "profile.html"
     )
 
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+
+    if request.method == "POST":
+
+        email = request.form.get("email", "").strip().lower()
+        new_password = request.form.get("password")
+
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # Let the model hash the password
+            user.password = new_password
+
+            db.session.commit()
+
+            flash("Password reset successfully. Please login.", "success")
+            return redirect(url_for("login"))
+
+        flash("Email not found.", "danger")
+
+    return render_template("forgot_password.html")
 
 
 # =====================================

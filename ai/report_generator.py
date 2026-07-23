@@ -6,9 +6,11 @@ def generate_pdf_report(
     report_path,
     doc1,
     doc2,
+    result,
     plagiarism_percentage,
     matching_paragraphs=None,
-    matching_sentences=None
+    matching_sentences=None,
+    top_matches=None
 ):
     """
     Generates a plagiarism PDF report.
@@ -20,6 +22,8 @@ def generate_pdf_report(
 
     if matching_sentences is None:
         matching_sentences = []
+    if top_matches is None:
+        top_matches = []
 
     try:
 
@@ -319,7 +323,62 @@ def generate_pdf_report(
         # END
         ###################################################
 
-        story.append(Spacer(1, 20))
+        ###################################################
+        # TOP MATCHING DOCUMENTS
+    ##############################################
+
+        if top_matches:
+
+            story.append(
+                Paragraph(
+                    "Top Matching Documents",
+                    heading_style
+        )
+    )
+
+            story.append(Spacer(1, 10))
+
+            data = [["File Name", "Similarity"]]
+
+            for match in top_matches:
+
+                data.append([
+                    match["filename"],
+                    f"{match['percentage']}%"
+        ])
+
+            top_table = Table(
+                data,
+                colWidths=[320, 120]
+    )
+
+            top_table.setStyle(
+
+                TableStyle([
+
+                    ("GRID", (0,0), (-1,-1), 1, colors.grey),
+
+                    ("BACKGROUND", (0,0), (-1,0), colors.lightblue),
+
+                    ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+
+                    ("BACKGROUND", (0,1), (0,-1), colors.whitesmoke),
+
+                    ("BOTTOMPADDING", (0,0), (-1,-1), 8),
+
+                    ("ALIGN", (1,1), (-1,-1), "CENTER"),
+
+        ])
+
+    )
+
+            story.append(top_table)
+
+            story.append(Spacer(1,20))
+
+###################################################
+# END
+###################################################
 
         story.append(
 
@@ -329,14 +388,55 @@ def generate_pdf_report(
 
                 body_style
 
-            )
+    )
 
-        )
+)
 
         doc.build(story)
+# Existing plagiarism summary
+        story.append(
+            Paragraph(
+                f"<b>Plagiarism Percentage:</b> {plagiarism_percentage}%",
+                body_style
+    )
+)
 
-        print("PDF Report Generated")
+        story.append(Spacer(1, 15))
 
+# ================= AI Writing Analysis =================
+
+        story.append(
+            Paragraph(
+                "AI Writing Analysis",
+                heading_style
+    )
+)
+
+        ai_table = [
+            ["AI Probability", f"{result.ai_score}%"],
+            ["Confidence", result.ai_confidence],
+            ["RoBERTa", f"{result.roberta_score}%"],
+            ["Perplexity", str(result.perplexity_score)],
+            ["Burstiness", f"{result.burstiness_score}%"],
+            ["Stylometry", f"{result.stylometry_score}%"],
+            ["Vocabulary", f"{result.vocabulary_score}%"],
+            ["Repetition", f"{result.repetition_score}%"],
+            ["Readability", f"{result.readability_score}%"],
+]
+
+        table = Table(ai_table, colWidths=[180, 250])
+
+        table.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+]))
+
+        story.append(table)
+
+        story.append(Spacer(1, 15))
+
+# Continue with Matching Paragraphs section...      
     except ImportError:
 
         with open(

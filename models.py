@@ -307,7 +307,11 @@ class Result(db.Model):
         db.Float,
         default=0
     )
-
+    
+    ai_score = db.Column(
+    db.Float,
+    default=0
+)
 
     report_path = db.Column(
         db.String(255)
@@ -334,7 +338,26 @@ class Result(db.Model):
         foreign_keys=[document2_id],
         back_populates="matched_results"
     )
+    ai_score = db.Column(db.Float, default=0)
 
+    ai_confidence = db.Column(
+    db.String(20),
+    default="Low"
+)
+
+    roberta_score = db.Column(db.Float, default=0)
+
+    perplexity_score = db.Column(db.Float, default=0)
+
+    burstiness_score = db.Column(db.Float, default=0)
+
+    stylometry_score = db.Column(db.Float, default=0)
+
+    vocabulary_score = db.Column(db.Float, default=0)
+
+    repetition_score = db.Column(db.Float, default=0)
+
+    readability_score = db.Column(db.Float, default=0)
 
 
     def __repr__(self):
